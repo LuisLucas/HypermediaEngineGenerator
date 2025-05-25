@@ -5,7 +5,7 @@ namespace HypermediaEngineGenerator.AttributesGen.Attrubutes
 {
     internal static class HypermediaEnableAttribute
     {
-        internal const string FileName = "HypermediaAttribute";
+        private const string FileName = "HypermediaEnableAttribute";
         private const string Class = @"
 namespace Hypermedia.Attributes
 {
@@ -21,7 +21,7 @@ namespace Hypermedia.Attributes
     }
 }";
 
-        internal static IncrementalGeneratorInitializationContext AddAttributeToSource(this IncrementalGeneratorInitializationContext context)
+        internal static IncrementalGeneratorInitializationContext AddToSource(this IncrementalGeneratorInitializationContext context)
         {
             return context.AddFileToSource(Class, FileName);
         }
