@@ -1,5 +1,7 @@
 ﻿using HypermediaEngineGenerator.Attributes;
+using HypermediaEngineGenerator.HypermediaGenerator;
 using HypermediaEngineGenerator.InterfacesGen;
+using HypermediaEngineGenerator.ModelsGen;
 using Microsoft.CodeAnalysis;
 
 namespace HypermediaEngineGenerator.Generator
@@ -11,7 +13,11 @@ namespace HypermediaEngineGenerator.Generator
         {
             context
                 .AddAttributes()
-                .AddInterfaces();
+                .AddInterfaces()
+                .AddModels();
+
+            HypermediaFactory.AddToSource(context);
+            LinkGenerator.AddToSource(context);
         }
     }
 }

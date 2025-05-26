@@ -7,6 +7,8 @@ namespace HypermediaEngineGenerator.InterfacesGen.Interfaces
     {
         private const string FileName = "IHypermediaGenerator";
         public const string Class = @"
+using Hypermedia.Models;
+
 namespace Hypermedia.Interfaces;
 
 public interface IHypermediaGenerator<T>
