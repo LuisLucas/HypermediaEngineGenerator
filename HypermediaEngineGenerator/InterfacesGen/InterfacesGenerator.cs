@@ -5,7 +5,7 @@ namespace HypermediaEngineGenerator.InterfacesGen
 {
     internal static class InterfacesGenerator
     {
-        internal static IncrementalGeneratorInitializationContext AddAttributes(this IncrementalGeneratorInitializationContext context)
+        internal static IncrementalGeneratorInitializationContext AddInterfaces(this IncrementalGeneratorInitializationContext context)
         {
             IHypermediaGenerator.AddToSource(context);
             return context;

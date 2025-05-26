@@ -1,4 +1,5 @@
 ﻿using HypermediaEngineGenerator.Attributes;
+using HypermediaEngineGenerator.InterfacesGen;
 using Microsoft.CodeAnalysis;
 
 namespace HypermediaEngineGenerator.Generator
@@ -8,7 +9,9 @@ namespace HypermediaEngineGenerator.Generator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            context.AddAttributes();
+            context
+                .AddAttributes()
+                .AddInterfaces();
         }
     }
 }

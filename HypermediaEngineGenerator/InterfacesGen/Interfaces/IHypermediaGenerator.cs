@@ -15,7 +15,11 @@ public interface IHypermediaGenerator<T>
 
     Resource<T> GenerateLinks(T item, Type controller);
 
+    CollectionResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext);
+
     CollectionResource<T> GenerateLinks(IEnumerable<T> items, Type controller);
+
+    PaginatedResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext, int page, int pageSize, int totalNumberOfRecords);
 
     PaginatedResource<T> GenerateLinks(IEnumerable<T> items, Type controller, int page, int pageSize, int totalNumberOfRecords);
 }";
