@@ -5,7 +5,7 @@ namespace HypermediaEngineGenerator.AttributesGen.Attrubutes
 {
     internal static class HypermediaListAttribute
     {
-        private const string FileName = "HypermediaListAttribute";
+        internal const string FileName = "HypermediaListAttribute";
         private const string Class = @"
 namespace Hypermedia.Attributes;
 

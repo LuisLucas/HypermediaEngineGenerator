@@ -7,7 +7,6 @@ namespace HypermediaEngineGenerator.Attributes
     {
         internal static IncrementalGeneratorInitializationContext AddAttributes(this IncrementalGeneratorInitializationContext context)
         {
-            HypermediaEnableAttribute.AddToSource(context);
             HypermediaAttribute.AddToSource(context);
             HypermediaListAttribute.AddToSource(context);
             return context;
