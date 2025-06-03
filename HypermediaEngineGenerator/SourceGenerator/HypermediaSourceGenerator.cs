@@ -1,13 +1,16 @@
 ﻿using HypermediaEngineGenerator.Attributes;
 using HypermediaEngineGenerator.AttributesGen.Attrubutes;
+using HypermediaEngineGenerator.Helper;
 using HypermediaEngineGenerator.HypermediaGenerator;
 using HypermediaEngineGenerator.InterfacesGen;
 using HypermediaEngineGenerator.ModelsGen;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 
 namespace HypermediaEngineGenerator.Generator
 {
@@ -36,10 +39,13 @@ namespace HypermediaEngineGenerator.Generator
             context.RegisterSourceOutput(compilationAndClasses, (spc, source) =>
             {
                 Compilation compilation = source.Left;
-                IEnumerable<INamedTypeSymbol> classes = source.Right.Distinct();
+                IEnumerable<INamedTypeSymbol> classes = source.Right.Distinct(SymbolEqualityComparer.Default).Cast<INamedTypeSymbol>();
 
                 foreach (INamedTypeSymbol symbol in classes)
                 {
+                    Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes = ExtractAttributesFromType(symbol);
+                    string typeNamespace = symbol.GetFullNamespace();
+                    string typeName = symbol.Name;
                 }
             });
         }
@@ -60,5 +66,63 @@ namespace HypermediaEngineGenerator.Generator
             }
             return null;
         }
+
+        public static Dictionary<string, List<ImmutableArray<TypedConstant>>> ExtractAttributesFromType(INamedTypeSymbol typeSymbol)
+        {
+            var actions = new Dictionary<string, List<ImmutableArray<TypedConstant>>>()
+            {
+                { HypermediaAttribute.FileName, new List<ImmutableArray<TypedConstant>>() },
+                { HypermediaListAttribute.FileName, new List<ImmutableArray<TypedConstant>>() }
+            };
+
+            foreach (AttributeData attributeData in typeSymbol.GetAttributes())
+            {
+                string attrClassName = attributeData.AttributeClass?.Name;
+                if (attrClassName is null || !attrClassName.StartsWith("Hypermedia"))
+                {
+                    continue;
+                }
+
+                if (actions.ContainsKey(attrClassName))
+                {
+                    actions[attrClassName].Add(attributeData.ConstructorArguments);
+                }
+            }
+            return actions;
+        }
+
+        private void AddModelHateoasClassToSource(SourceProductionContext spc, Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes, string typeName, string typeNamespace)
+        {
+            List<string> actions = new List<string>();
+            foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaAttribute.FileName])
+            {
+                string method = action[0].Value as string;
+                string rel = action[1].Value as string;
+                string property = action[2].Value as string;
+                string controller = action[3].Value as string;
+                actions.Add($"new ControllerAction(\"{method}\", new {{ {property.ToLowerInvariant()} = item.{property} }}, \"{rel}\", \"{method}\", \"{controller}\")");
+            }
+
+            List<string> listActions = new List<string>();
+            foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaListAttribute.FileName])
+            {
+                string method = action[0].Value as string;
+                string rel = action[1].Value as string;
+                listActions.Add($"new ControllerAction(\"{method}\", new {{ }}, \"{rel}\", \"{method}\"));");
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("using Hypermedia.Interfaces;");
+            sb.AppendLine($"using {typeNamespace};");
+            sb.AppendLine("namespace HyperMediaGenerator");
+            sb.AppendLine("{");
+            sb.AppendLine($"  public class {typeName}HyperMedia(IHypermediaGenerator hypermediaGen) : IHateoas<{typeName}>");
+            sb.AppendLine("   {");
+            sb.AppendLine("");
+            sb.AppendLine("   }");
+            sb.AppendLine("}");
+
+            spc.AddSource($"{typeName}_Hateoas.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+        }.
     }
 }
