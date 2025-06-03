@@ -46,6 +46,8 @@ namespace HypermediaEngineGenerator.Generator
                     Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes = ExtractAttributesFromType(symbol);
                     string typeNamespace = symbol.GetFullNamespace();
                     string typeName = symbol.Name;
+
+                    AddModelHateoasClassToSource(spc, actionsAttributes, typeName, typeNamespace);
                 }
             });
         }
@@ -114,15 +116,44 @@ namespace HypermediaEngineGenerator.Generator
             var sb = new StringBuilder();
             sb.AppendLine("using Hypermedia.Interfaces;");
             sb.AppendLine($"using {typeNamespace};");
-            sb.AppendLine("namespace HyperMediaGenerator");
-            sb.AppendLine("{");
-            sb.AppendLine($"  public class {typeName}HyperMedia(IHypermediaGenerator hypermediaGen) : IHateoas<{typeName}>");
-            sb.AppendLine("   {");
             sb.AppendLine("");
-            sb.AppendLine("   }");
-            sb.AppendLine("}");
+            sb.AppendLine("namespace HypermediaGenerator");
+            sb.AppendLine("{");
+            sb.AppendLine("");
+            sb.AppendLine($"  public class {typeName}Hypermedia(IHypermediaGenerator hypermediaGen) : IHypermediaGenerator<{typeName}>");
+            sb.AppendLine("   {");
+            sb.AppendLine($"        public Resource<{typeName}> GenerateLinks({typeName} item, HttpContext httpContext)");
+            sb.AppendLine("         {");
+            sb.AppendLine("             var routeData = httpContext.GetRouteData();");
+            sb.AppendLine("             var controllerName = routeData.Values[\"controller\"]?.ToString();");
+            sb.AppendLine("             var itemActions = new List<ControllerAction>();");
 
-            spc.AddSource($"{typeName}_Hateoas.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
-        }.
+            foreach (string controllerAction in actions)
+            {
+                sb.AppendLine($"        itemActions.Add({controllerAction});");
+            }
+
+            foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaListAttribute.FileName])
+            {
+                string method = action[0].Value as string;
+                string rel = action[1].Value as string;
+                if (method == "GET" && rel == "self")
+                {
+                    sb.AppendLine($"        itemActions.Add(new ControllerAction(\"{method}\", new {{ }}, \"collection\", \"{method}\"));");
+
+                }
+            }
+
+            sb.AppendLine($"        Resource <{typeName}> response = hypermediaGen.CreateResponse<{typeName}>(");
+            sb.AppendLine("                                                                 controllerName,");
+            sb.AppendLine("                                                                 item,");
+            sb.AppendLine("                                                                 itemActions);");
+            sb.AppendLine("         return response;");
+            sb.AppendLine("     }");
+            sb.AppendLine("   }                          ");
+            sb.AppendLine("}                             ");
+
+            spc.AddSource($"{typeName}Hypermedia.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+        }
     }
 }
