@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
-namespace HypermediaEngineGenerator.Generator
+namespace HypermediaEngineGenerator.SourceGenerator
 {
     [Generator]
     internal class HypermediaSourceGenerator : IIncrementalGenerator
@@ -53,12 +53,12 @@ namespace HypermediaEngineGenerator.Generator
         }
 
         private static bool IsCandidateClass(SyntaxNode node) =>
-                            (node is ClassDeclarationSyntax c && c.AttributeLists.Count > 0) || (node is RecordDeclarationSyntax r && r.AttributeLists.Count > 0);
+                            node is ClassDeclarationSyntax c && c.AttributeLists.Count > 0 || node is RecordDeclarationSyntax r && r.AttributeLists.Count > 0;
 
         private static INamedTypeSymbol GetSemanticTarget(GeneratorSyntaxContext context)
         {
             if (context.Node is RecordDeclarationSyntax classSyntax &&
-                (context.SemanticModel.GetDeclaredSymbol(classSyntax) is INamedTypeSymbol symbol))
+                context.SemanticModel.GetDeclaredSymbol(classSyntax) is INamedTypeSymbol symbol)
             {
                 bool hasHateoasAttr = symbol.GetAttributes()
                     .Any(attr => attr.AttributeClass?.Name.Contains(HypermediaAttribute.FileName) == true ||
