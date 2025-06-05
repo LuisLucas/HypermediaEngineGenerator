@@ -106,54 +106,52 @@ namespace HypermediaEngineGenerator.SourceGenerator
             }
 
             List<string> listActions = new List<string>();
+            var listSelfLink = "";
             foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaListAttribute.FileName])
             {
                 string method = action[0].Value as string;
                 string rel = action[1].Value as string;
                 listActions.Add($"new ControllerAction(\"{method}\", new {{ }}, \"{rel}\", \"{method}\"));");
-            }
-
-            var sb = new StringBuilder();
-            sb.AppendLine("using Hypermedia.Interfaces;");
-            sb.AppendLine($"using {typeNamespace};");
-            sb.AppendLine("");
-            sb.AppendLine("namespace HypermediaGenerator");
-            sb.AppendLine("{");
-            sb.AppendLine("");
-            sb.AppendLine($"  public class {typeName}Hypermedia(IHypermediaGenerator hypermediaGen) : IHypermediaGenerator<{typeName}>");
-            sb.AppendLine("   {");
-            sb.AppendLine($"        public Resource<{typeName}> GenerateLinks({typeName} item, HttpContext httpContext)");
-            sb.AppendLine("         {");
-            sb.AppendLine("             var routeData = httpContext.GetRouteData();");
-            sb.AppendLine("             var controllerName = routeData.Values[\"controller\"]?.ToString();");
-            sb.AppendLine("             var itemActions = new List<ControllerAction>();");
-
-            foreach (string controllerAction in actions)
-            {
-                sb.AppendLine($"        itemActions.Add({controllerAction});");
-            }
-
-            foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaListAttribute.FileName])
-            {
-                string method = action[0].Value as string;
-                string rel = action[1].Value as string;
+                
                 if (method == "GET" && rel == "self")
                 {
-                    sb.AppendLine($"        itemActions.Add(new ControllerAction(\"{method}\", new {{ }}, \"collection\", \"{method}\"));");
+                    listSelfLink = "new ControllerAction(\"{method}\", new {{ }}, \"collection\", \"{method}\"));";
 
                 }
             }
 
-            sb.AppendLine($"        Resource <{typeName}> response = hypermediaGen.CreateResponse<{typeName}>(");
-            sb.AppendLine("                                                                 controllerName,");
-            sb.AppendLine("                                                                 item,");
-            sb.AppendLine("                                                                 itemActions);");
-            sb.AppendLine("         return response;");
-            sb.AppendLine("     }");
-            sb.AppendLine("   }                          ");
-            sb.AppendLine("}                             ");
+            var sourceText = $@"
+                using Hypermedia.Interfaces;
+                using {typeNamespace};
+                
+                namespace HypermediaGenerator
+                {{
+                    public class {typeName}Hypermedia(IHypermediaGenerator hypermediaGen) : IHypermediaGenerator<{typeName}>
+                    {{
+                        public Resource<{typeName}> GenerateLinks({typeName} item, HttpContext httpContext)
+                        {{
+                            var routeData = httpContext.GetRouteData();
+                            var controllerName = routeData.Values[""controller""]?.ToString();
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)},{listSelfLink}
+                                                            }}
+                            return hypermediaGen.CreateResponse<{typeName}>(controllerName, item, itemActions);
+                        }}
+                        
+                        public Resource<{typeName}> GenerateLinks({typeName} item, Type controller)
+                        {{
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)},{listSelfLink}
+                                                            }}
+                            return hypermediaGen.CreateResponse<{typeName}>(controller.Name.Replace(""Controller"", """"), item, itemActions);
+                        }}
+                    }}
+                }}
+            ";
 
-            spc.AddSource($"{typeName}Hypermedia.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+            spc.AddSource($"{typeName}Hypermedia.g.cs", SourceText.From(sourceText, Encoding.UTF8));
         }
     }
 }
