@@ -25,7 +25,7 @@ public interface IHypermediaFactory
                                                     List<ControllerAction<T, object>> itemActions);
 }
 
-public class HypermediaFactory(LinkGenerator linkGenerator, IHttpContextAccessor httpContextAccessor) : IHateoasFactory
+public class HypermediaFactory(LinkGenerator linkGenerator, IHttpContextAccessor httpContextAccessor) : IHypermediaFactory
 {
     public Resource<T> CreateResponse<T>(
                                 string controller,

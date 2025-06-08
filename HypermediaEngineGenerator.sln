@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.36105.23 d17.13
+VisualStudioVersion = 17.13.36105.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HypermediaEngineGenerator", "HypermediaEngineGenerator\HypermediaEngineGenerator.csproj", "{F53750E1-2013-4580-AE2F-312F0F2C6DD9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HypermediaEngineGenerator.Demo", "HypermediaEngineGenerator.Demo\HypermediaEngineGenerator.Demo.csproj", "{B83FEA7D-4D07-4571-B945-637DE4B642D0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{F53750E1-2013-4580-AE2F-312F0F2C6DD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F53750E1-2013-4580-AE2F-312F0F2C6DD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F53750E1-2013-4580-AE2F-312F0F2C6DD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B83FEA7D-4D07-4571-B945-637DE4B642D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B83FEA7D-4D07-4571-B945-637DE4B642D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B83FEA7D-4D07-4571-B945-637DE4B642D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B83FEA7D-4D07-4571-B945-637DE4B642D0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

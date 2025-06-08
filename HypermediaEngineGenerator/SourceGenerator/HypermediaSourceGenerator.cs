@@ -135,7 +135,7 @@ namespace HypermediaEngineGenerator.SourceGenerator
                             var itemActions = new List<ControllerAction>()
                                                             {{
                                                                 {string.Join(", ", actions)},{listSelfLink}
-                                                            }}
+                                                            }};
                             return hypermediaGen.CreateResponse<{typeName}>(controllerName, item, itemActions);
                         }}
                         
@@ -144,8 +144,89 @@ namespace HypermediaEngineGenerator.SourceGenerator
                             var itemActions = new List<ControllerAction>()
                                                             {{
                                                                 {string.Join(", ", actions)},{listSelfLink}
-                                                            }}
+                                                            }};
                             return hypermediaGen.CreateResponse<{typeName}>(controller.Name.Replace(""Controller"", """"), item, itemActions);
+                        }}
+
+                        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext)
+                        {{
+                            var routeData = httpContext.GetRouteData();
+                            var controllerName = routeData.Values[""controller""]?.ToString();
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)}
+                                                            }};
+                            var listActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", listActions)}
+                                                            }};
+
+                            return hypermediaGen.CreateCollectionResponse<ProductModel, object>(
+                                                                 controllerName,
+                                                                 items,
+                                                                 listActions,
+                                                                 itemActions);
+
+                        }}
+
+                        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, Type controller)
+                        {{
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)}
+                                                            }};
+
+                            var listActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", listActions)}
+                                                            }};
+
+                            return hypermediaGen.CreateCollectionResponse<ProductModel, object>(
+                                                                 controller.Name.Replace(""Controller"", """"),
+                                                                 items,
+                                                                 listActions,
+                                                                 itemActions);
+                        }}
+
+                        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext, int page, int pageSize, int totalNumberOfRecords)
+                        {{
+                            var routeData = httpContext.GetRouteData();
+                            var controllerName = routeData.Values[""controller""]?.ToString();
+                            
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)}
+                                                            }};
+
+                            var listActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", listActions)}
+                                                            }};
+
+                            return hypermediaGen.CreatePaginatedResponse<ProductModel>(
+                                                                controllerName, 
+                                                                items, 
+                                                                listActions, 
+                                                                itemActions);
+                        }}
+
+                        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, Type controller, int page, int pageSize, int totalNumberOfRecords)
+                        {{                            
+                            var itemActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", actions)}
+                                                            }};
+
+                            var listActions = new List<ControllerAction>()
+                                                            {{
+                                                                {string.Join(", ", listActions)}
+                                                            }};
+
+                            return hypermediaGen.CreatePaginatedResponse<ProductModel>(
+                                                                controller.Name.Replace(""Controller"", """"), 
+                                                                items, 
+                                                                listActions, 
+                                                                itemActions);
                         }}
                     }}
                 }}
