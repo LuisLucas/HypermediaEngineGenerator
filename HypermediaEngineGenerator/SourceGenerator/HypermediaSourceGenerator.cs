@@ -41,14 +41,16 @@ namespace HypermediaEngineGenerator.SourceGenerator
                 Compilation compilation = source.Left;
                 IEnumerable<INamedTypeSymbol> classes = source.Right.Distinct(SymbolEqualityComparer.Default).Cast<INamedTypeSymbol>();
 
+                List<string> registration = new List<string>();
+                List<string> registrationUsings = new List<string>();
                 foreach (INamedTypeSymbol symbol in classes)
                 {
                     Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes = ExtractAttributesFromType(symbol);
-                    string typeNamespace = symbol.GetFullNamespace();
-                    string typeName = symbol.Name;
-
-                    AddModelHateoasClassToSource(spc, actionsAttributes, typeName, typeNamespace);
+                    AddModelHateoasClassToSource(spc, actionsAttributes, symbol);
+                    AddHypermediaEngineGeneratorRegistration(registration, registrationUsings, symbol);
                 }
+
+                AddHypermediaEngineGeneratorRegistrationExtension(spc, registration, registrationUsings);
             });
         }
 
@@ -57,14 +59,18 @@ namespace HypermediaEngineGenerator.SourceGenerator
 
         private static INamedTypeSymbol GetSemanticTarget(GeneratorSyntaxContext context)
         {
-            if (context.Node is RecordDeclarationSyntax classSyntax &&
-                context.SemanticModel.GetDeclaredSymbol(classSyntax) is INamedTypeSymbol symbol)
+            if (context.Node is ClassDeclarationSyntax)
             {
-                bool hasHateoasAttr = symbol.GetAttributes()
-                    .Any(attr => attr.AttributeClass?.Name.Contains(HypermediaAttribute.FileName) == true ||
-                                    attr.AttributeClass?.Name.Contains(HypermediaListAttribute.FileName) == true);
+                var classSyntax = (ClassDeclarationSyntax)context.Node;
+                if (context.SemanticModel.GetDeclaredSymbol(classSyntax) is INamedTypeSymbol symbol)
+                {
+                    bool hasHateoasAttr = symbol.GetAttributes()
+                                                    .Any(attr => attr.AttributeClass?.Name.Contains(HypermediaAttribute.FileName) == true
+                                                              || attr.AttributeClass?.Name.Contains(HypermediaListAttribute.FileName) == true);
 
-                return hasHateoasAttr ? symbol : null;
+                    return hasHateoasAttr ? symbol : null;
+                }
+
             }
             return null;
         }
@@ -93,8 +99,11 @@ namespace HypermediaEngineGenerator.SourceGenerator
             return actions;
         }
 
-        private void AddModelHateoasClassToSource(SourceProductionContext spc, Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes, string typeName, string typeNamespace)
+        private void AddModelHateoasClassToSource(SourceProductionContext spc, Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes, INamedTypeSymbol symbol)
         {
+            string typeNamespace = symbol.GetFullNamespace();
+            string typeName = symbol.Name;
+
             List<string> actions = new List<string>();
             foreach (ImmutableArray<TypedConstant> action in actionsAttributes[HypermediaAttribute.FileName])
             {
@@ -121,118 +130,156 @@ namespace HypermediaEngineGenerator.SourceGenerator
             }
 
             var sourceText = $@"
-                using Hypermedia.Interfaces;
-                using {typeNamespace};
-                
-                namespace HypermediaGenerator
-                {{
-                    public class {typeName}Hypermedia(IHypermediaGenerator hypermediaGen) : IHypermediaGenerator<{typeName}>
-                    {{
-                        public Resource<{typeName}> GenerateLinks({typeName} item, HttpContext httpContext)
-                        {{
-                            var routeData = httpContext.GetRouteData();
-                            var controllerName = routeData.Values[""controller""]?.ToString();
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)},{listSelfLink}
-                                                            }};
-                            return hypermediaGen.CreateResponse<{typeName}>(controllerName, item, itemActions);
-                        }}
-                        
-                        public Resource<{typeName}> GenerateLinks({typeName} item, Type controller)
-                        {{
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)},{listSelfLink}
-                                                            }};
-                            return hypermediaGen.CreateResponse<{typeName}>(controller.Name.Replace(""Controller"", """"), item, itemActions);
-                        }}
+using Hypermedia.Interfaces;
+using {typeNamespace};
+    
+namespace HypermediaGenerator
+{{
+    public class {typeName}HypermediaGenerator(IHypermediaGenerator hypermediaGen) : IHypermediaGenerator<{typeName}>
+    {{
+        public Resource<{typeName}> GenerateLinks({typeName} item, HttpContext httpContext)
+        {{
+            var routeData = httpContext.GetRouteData();
+            var controllerName = routeData.Values[""controller""]?.ToString();
+            var itemActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", actions)},{listSelfLink}
+                                                }};
+            return hypermediaGen.CreateResponse<{typeName}>(controllerName, item, itemActions);
+        }}
+            
+        public Resource<{typeName}> GenerateLinks({typeName} item, Type controller)
+        {{
+            var itemActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", actions)},{listSelfLink}
+                                                }};
+            return hypermediaGen.CreateResponse<{typeName}>(controller.Name.Replace(""Controller"", """"), item, itemActions);
+        }}
 
-                        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext)
-                        {{
-                            var routeData = httpContext.GetRouteData();
-                            var controllerName = routeData.Values[""controller""]?.ToString();
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)}
-                                                            }};
-                            var listActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", listActions)}
-                                                            }};
+        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext)
+        {{
+            var routeData = httpContext.GetRouteData();
+            var controllerName = routeData.Values[""controller""]?.ToString();
+            var itemActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", actions)}
+                                                }};
+            var listActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", listActions)}
+                                                }};
 
-                            return hypermediaGen.CreateCollectionResponse<ProductModel, object>(
-                                                                 controllerName,
-                                                                 items,
-                                                                 listActions,
-                                                                 itemActions);
+            return hypermediaGen.CreateCollectionResponse<{typeName}, object>(
+                                                     controllerName,
+                                                     items,
+                                                     listActions,
+                                                     itemActions);
 
-                        }}
+        }}
 
-                        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, Type controller)
-                        {{
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)}
-                                                            }};
+        public CollectionResource<T> GenerateLinks(IEnumerable<T> items, Type controller)
+        {{
+            var itemActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", actions)}
+                                                }};
 
-                            var listActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", listActions)}
-                                                            }};
+            var listActions = new List<ControllerAction>()
+                                                {{
+                                                    {string.Join(", ", listActions)}
+                                                }};
 
-                            return hypermediaGen.CreateCollectionResponse<ProductModel, object>(
-                                                                 controller.Name.Replace(""Controller"", """"),
-                                                                 items,
-                                                                 listActions,
-                                                                 itemActions);
-                        }}
+            return hypermediaGen.CreateCollectionResponse<{typeName}, object>(
+                                                     controller.Name.Replace(""Controller"", """"),
+                                                     items,
+                                                     listActions,
+                                                     itemActions);
+        }}
 
-                        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext, int page, int pageSize, int totalNumberOfRecords)
-                        {{
-                            var routeData = httpContext.GetRouteData();
-                            var controllerName = routeData.Values[""controller""]?.ToString();
-                            
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)}
-                                                            }};
+        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, HttpContext httpContext, int page, int pageSize, int totalNumberOfRecords)
+        {{
+            var routeData = httpContext.GetRouteData();
+            var controllerName = routeData.Values[""controller""]?.ToString();
+            
+            var itemActions = new List<ControllerAction>()
+                                            {{
+                                                {string.Join(", ", actions)}
+                                            }};
 
-                            var listActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", listActions)}
-                                                            }};
+            var listActions = new List<ControllerAction>()
+                                            {{
+                                                {string.Join(", ", listActions)}
+                                            }};
 
-                            return hypermediaGen.CreatePaginatedResponse<ProductModel>(
-                                                                controllerName, 
-                                                                items, 
-                                                                listActions, 
-                                                                itemActions);
-                        }}
+            return hypermediaGen.CreatePaginatedResponse<{typeName}>(
+                                                controllerName, 
+                                                items, 
+                                                listActions, 
+                                                itemActions);
+        }}
 
-                        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, Type controller, int page, int pageSize, int totalNumberOfRecords)
-                        {{                            
-                            var itemActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", actions)}
-                                                            }};
+        public PaginatedResource<T> GenerateLinks(IEnumerable<T> items, Type controller, int page, int pageSize, int totalNumberOfRecords)
+        {{                            
+            var itemActions = new List<ControllerAction>()
+                                            {{
+                                                {string.Join(", ", actions)}
+                                            }};
 
-                            var listActions = new List<ControllerAction>()
-                                                            {{
-                                                                {string.Join(", ", listActions)}
-                                                            }};
+            var listActions = new List<ControllerAction>()
+                                            {{
+                                                {string.Join(", ", listActions)}
+                                            }};
 
-                            return hypermediaGen.CreatePaginatedResponse<ProductModel>(
-                                                                controller.Name.Replace(""Controller"", """"), 
-                                                                items, 
-                                                                listActions, 
-                                                                itemActions);
-                        }}
-                    }}
-                }}
-            ";
+            return hypermediaGen.CreatePaginatedResponse<{typeName}>(
+                                                controller.Name.Replace(""Controller"", """"), 
+                                                items, 
+                                                listActions, 
+                                                itemActions);
+        }}
+    }}
+}}
+";
 
             spc.AddSource($"{typeName}Hypermedia.g.cs", SourceText.From(sourceText, Encoding.UTF8));
+        }
+
+        private void AddHypermediaEngineGeneratorRegistrationExtension(SourceProductionContext spc, List<string> registration, List<string> registrationUsings)
+        {
+            var usings = new StringBuilder();
+            foreach (var use in registrationUsings) 
+            {
+                usings.AppendLine("using " +  use + ";");
+            }
+            
+
+            var sourceText = $@"
+using Microsoft.Extensions.DependencyInjection;
+using Hypermedia.Interfaces;
+using Hypermedia.Generator;
+{usings}
+
+namespace HypermediaGenerator
+{{
+    public static class HypermediaGeneratorRegistration
+    {{
+        public static IServiceCollection AddHypermediaGenerator(this IServiceCollection services)
+        {{
+            services.AddTransient<IHypermediaFactory, HypermediaFactory>();
+            return services;
+        }}
+    }}
+}}
+";
+            spc.AddSource($"HypermediaEngineGeneratorRegistration.g.cs.g.cs", SourceText.From(sourceText, Encoding.UTF8));
+        }
+
+        internal static void AddHypermediaEngineGeneratorRegistration(List<string> registration, List<string> registrationUsings, INamedTypeSymbol symbol)
+        {
+            string typeNamespace = symbol.GetFullNamespace();
+            string typeName = symbol.Name;
+            registrationUsings.Add(typeNamespace);
+            registration.Add($"            services.AddScoped<IHypermediaGenerator<{typeName}>, {typeName}HypermediaGenerator>();");
         }
     }
 }

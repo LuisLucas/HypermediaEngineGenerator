@@ -1,25 +1,47 @@
-﻿using HypermediaEngineGenerator.Demo.Model;
+﻿using HypermediaEngineGenerator.Demo.Data;
+using HypermediaEngineGenerator.Demo.Model;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HypermediaEngineGenerator.Demo.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class HypermediaEngieGeneratorController : Controller
+    public class HypermediaEngieGeneratorController(HypermediaEngineGeneratorData data) : Controller
     {
 
         [HttpGet]
         public IEnumerable<HypermediaEngineGeneratorModel> Get()
         {
-            var list =  Enumerable.Range(1, 5).Select(index => new HypermediaEngineGeneratorModel
-            {
-                Id = index,
-                Name = index.ToString(),
-                Description = index.ToString() + "Description",
-            })
-            .ToArray();
+            var result = data.GetHypermediaGeneratorData();
+            return result;
+        }
 
-            return list;
+        [HttpGet]
+        public HypermediaEngineGeneratorModel Get(int id)
+        {
+            var result = data.GetHypermediaGeneratorData(id);
+            return result;
+        }
+
+        [HttpPut]
+        public HypermediaEngineGeneratorModel Put(int id, string name, string description)
+        {
+            var result = data.UpdateHypermediaGeneratorData(id, name, description);
+            return result;
+        }
+
+        [HttpPost]
+        public HypermediaEngineGeneratorModel Post(string name, string description)
+        {
+            var result = data.AddHypermediaGeneratorData(name, description);
+            return result;
+        }
+
+        [HttpDelete]
+        public bool Delete(int id)
+        {
+            var result = data.DeleteHypermediaGeneratorData(id);
+            return result;
         }
     }
 }

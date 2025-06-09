@@ -1,3 +1,6 @@
+using HypermediaEngineGenerator.Demo.Data;
+using HypermediaGenerator;
+
 namespace HypermediaEngineGenerator.Demo
 {
     public class Program
@@ -9,6 +12,10 @@ namespace HypermediaEngineGenerator.Demo
             // Add services to the container.
 
             builder.Services.AddControllers();
+            builder.Services.AddTransient<HypermediaEngineGeneratorData>();
+
+            builder.Services.AddHypermediaGenerator();
+
 
             var app = builder.Build();
 
