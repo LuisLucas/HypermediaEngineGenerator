@@ -18,6 +18,12 @@ public interface IHypermediaFactory
                             T item,
                             List<ControllerAction> itemActions);
 
+    CollectionResource<T> CreateCollectionResponse<T>(
+                            string controller,
+                            IEnumerable<T> items,
+                            List<ControllerAction> listActions,
+                            List<ControllerAction<T, object>> itemActions);
+
     PaginatedResource<T> CreatePaginatedResponse<T>(
                                                     string controller,
                                                     IEnumerable<T> items,
@@ -41,6 +47,23 @@ public class HypermediaFactory(LinkGenerator linkGenerator, IHttpContextAccessor
             Links = BuildLinks(linkGenerator, controller, scheme, host.Value, itemActions)
         };
         return resource;
+    }
+
+    public CollectionResource<T> CreateCollectionResponse<T>(
+                            string controller,
+                            IEnumerable<T> items,
+                            List<ControllerAction> listActions,
+                            List<ControllerAction<T, object>> itemActions)
+    {
+        ArgumentNullException.ThrowIfNull(httpContextAccessor.HttpContext);
+        
+        (string? scheme, HostString? host) = ExtractSchemeAndHost();
+        var collectionResponse = new CollectionResource<T>
+        {
+            Items = AddLinkstoItems(linkGenerator, controller, scheme, host.Value, items, itemActions),
+            Links = BuildLinks(linkGenerator, controller, scheme, host.Value, listActions)
+        };
+        return collectionResponse;
     }
 
     public PaginatedResource<T> CreatePaginatedResponse<T>(string controller,
