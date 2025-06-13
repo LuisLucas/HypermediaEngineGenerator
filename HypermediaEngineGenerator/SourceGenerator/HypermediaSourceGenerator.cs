@@ -126,7 +126,7 @@ namespace HypermediaEngineGenerator.SourceGenerator
                 string rel = action[1].Value as string;
                 listActions.Add($"new ControllerAction(\"{method}\", new {{ }}, \"{rel}\", \"{method}\")");
                 
-                if (method == "GET" && rel == "self")
+                if (rel == "self")
                 {
                     listSelfLink = "new ControllerAction(\"{method}\", new { }, \"collection\", \"{method}\")";
 
@@ -173,6 +173,7 @@ namespace HypermediaGenerator
         {{
             var routeData = httpContext.GetRouteData();
             var controllerName = routeData.Values[""controller""]?.ToString();
+            
             var itemActions = new List<ControllerAction<{typeName}, object>>()
                                                 {{
                                                     {string.Join(", ", actionsWithFunc)}
@@ -213,7 +214,7 @@ namespace HypermediaGenerator
         {{
             var routeData = httpContext.GetRouteData();
             var controllerName = routeData.Values[""controller""]?.ToString();
-            
+
             var itemActions = new List<ControllerAction<{typeName}, object>>()
                                                 {{
                                                     {string.Join(", ", actionsWithFunc)}
@@ -259,9 +260,9 @@ namespace HypermediaGenerator
         private void AddHypermediaEngineGeneratorRegistrationExtension(SourceProductionContext spc, List<string> registration, List<string> registrationUsings)
         {
             var usings = new StringBuilder();
-            foreach (var use in registrationUsings) 
+            foreach (var nameSpace in registrationUsings) 
             {
-                usings.AppendLine("using " +  use + ";");
+                usings.AppendLine("using " + nameSpace + ";");
             }
             
 
@@ -277,7 +278,9 @@ namespace HypermediaGenerator
     {{
         public static IServiceCollection AddHypermediaGenerator(this IServiceCollection services)
         {{
+            services.AddHttpContextAccessor();
             services.AddTransient<IHypermediaFactory, HypermediaFactory>();
+            {string.Join("\n", registration)}
             return services;
         }}
     }}
@@ -291,7 +294,7 @@ namespace HypermediaGenerator
             string typeNamespace = symbol.GetFullNamespace();
             string typeName = symbol.Name;
             registrationUsings.Add(typeNamespace);
-            registration.Add($"            services.AddScoped<IHypermediaGenerator<{typeName}>, {typeName}HypermediaGenerator>();");
+            registration.Add($"services.AddScoped<IHypermediaGenerator<{typeName}>, {typeName}HypermediaGenerator>();");
         }
     }
 }

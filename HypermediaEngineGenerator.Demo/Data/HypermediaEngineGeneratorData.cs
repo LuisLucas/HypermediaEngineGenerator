@@ -23,6 +23,11 @@ namespace HypermediaEngineGenerator.Demo.Data
             return data.Values.ToList();
         }
 
+        internal (int, IEnumerable<HypermediaEngineGeneratorModel>) GetHypermediaGeneratorPaginatedData(int currentPage, int pageSize)
+        {
+            return (data.Count, data.Values.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList());
+        }
+
         public HypermediaEngineGeneratorModel GetHypermediaGeneratorData(int idx)
         {
             return data[idx];
