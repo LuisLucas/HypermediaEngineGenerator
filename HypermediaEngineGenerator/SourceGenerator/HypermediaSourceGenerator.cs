@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -19,6 +20,11 @@ namespace HypermediaEngineGenerator.SourceGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
+  /*if (!Debugger.IsAttached)
+  {
+    Debugger.Launch();
+  }*/
+
             context
                 .AddAttributes()
                 .AddInterfaces()
@@ -41,9 +47,14 @@ namespace HypermediaEngineGenerator.SourceGenerator
                 Compilation compilation = source.Left;
                 IEnumerable<INamedTypeSymbol> classes = source.Right.Distinct(SymbolEqualityComparer.Default).Cast<INamedTypeSymbol>();
 
+                //Debugger.Launch();
+
+                var controllers = classes.Where(x => x.BaseType.Name.Contains("Controller") && x.BaseType.ContainingNamespace.ToString() == "Microsoft.AspNetCore.Mvc");
+                var models = classes.Where(x => !x.BaseType.Name.Contains("Controller") && x.GetAttributes().Any());
+
                 List<string> registration = new List<string>();
                 List<string> registrationUsings = new List<string>();
-                foreach (INamedTypeSymbol symbol in classes)
+                foreach (INamedTypeSymbol symbol in models)
                 {
                     Dictionary<string, List<ImmutableArray<TypedConstant>>> actionsAttributes = ExtractAttributesFromType(symbol);
                     AddModelHateoasClassToSource(spc, actionsAttributes, symbol);
@@ -54,21 +65,48 @@ namespace HypermediaEngineGenerator.SourceGenerator
             });
         }
 
-        private static bool IsCandidateClass(SyntaxNode node) =>
-                            node is ClassDeclarationSyntax c && c.AttributeLists.Count > 0 || node is RecordDeclarationSyntax r && r.AttributeLists.Count > 0;
+        private static bool IsCandidateClass(SyntaxNode node)
+        {
+            if(node is ClassDeclarationSyntax c)
+            {
+                if (c.AttributeLists.Any())
+                {
+                    return true;
+                }
+                else if(c.BaseList != null && c.BaseList.Types.Any(baseType => baseType.Type.ToString().Contains("ControllerBase")))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            else if(node is RecordDeclarationSyntax r && r.AttributeLists.Count > 0)
+            {
+                return true;
+            }
+
+            return false;
+
+            /*
+             (node is ClassDeclarationSyntax c && (c.AttributeLists.Count > 0 || (c.BaseList != null && c.BaseList.Types.Any(baseType => baseType.Type.ToString().Contains("ControllerBase")))))
+                            || node is RecordDeclarationSyntax r && r.AttributeLists.Count > 0;
+            */
+        }
 
         private static INamedTypeSymbol GetSemanticTarget(GeneratorSyntaxContext context)
         {
             if (context.Node is ClassDeclarationSyntax)
             {
-                var classSyntax = (ClassDeclarationSyntax)context.Node;
+                ClassDeclarationSyntax classSyntax = (ClassDeclarationSyntax)context.Node;
                 if (context.SemanticModel.GetDeclaredSymbol(classSyntax) is INamedTypeSymbol symbol)
                 {
+                    bool controller = symbol.BaseType != null && symbol.BaseType.Name.Contains("Controller");
+
                     bool hasHateoasAttr = symbol.GetAttributes()
                                                     .Any(attr => attr.AttributeClass?.Name.Contains(HypermediaAttribute.FileName) == true
                                                               || attr.AttributeClass?.Name.Contains(HypermediaListAttribute.FileName) == true);
 
-                    return hasHateoasAttr ? symbol : null;
+                    return controller || hasHateoasAttr ? symbol : null;
                 }
 
             }
@@ -295,6 +333,18 @@ namespace HypermediaGenerator
             string typeName = symbol.Name;
             registrationUsings.Add(typeNamespace);
             registration.Add($"services.AddScoped<IHypermediaGenerator<{typeName}>, {typeName}HypermediaGenerator>();");
+        }
+    }
+
+    public class EndpointInfo
+    {
+        public string Name { get; }
+        public List<string> Parameters { get; }
+
+        public EndpointInfo(string name, List<string> parameters)
+        {
+            Name = name;
+            Parameters = parameters;
         }
     }
 }
