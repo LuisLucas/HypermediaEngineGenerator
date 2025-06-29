@@ -52,6 +52,8 @@ namespace HypermediaEngineGenerator.SourceGenerator
                 var controllers = classes.Where(x => x.BaseType.Name.Contains("Controller") && x.BaseType.ContainingNamespace.ToString() == "Microsoft.AspNetCore.Mvc");
                 var models = classes.Where(x => !x.BaseType.Name.Contains("Controller") && x.GetAttributes().Any());
 
+                var mappedControllers = GetControllerEndpointsInfo(controllers);
+
                 List<string> registration = new List<string>();
                 List<string> registrationUsings = new List<string>();
                 foreach (INamedTypeSymbol symbol in models)
@@ -64,6 +66,32 @@ namespace HypermediaEngineGenerator.SourceGenerator
                 AddHypermediaEngineGeneratorRegistrationExtension(spc, registration, registrationUsings);
             });
         }
+
+        public static Dictionary<string, Dictionary<string, List<string>>> GetControllerEndpointsInfo(IEnumerable<INamedTypeSymbol> symbols)
+        {
+            var result = new Dictionary<string, Dictionary<string, List<string>>>();
+
+            foreach (var symbol in symbols)
+            {
+                var endpoints = new Dictionary<string, List<string>>();
+
+                // Iterate over each method in the controller
+                foreach (var method in symbol.GetMembers().OfType<IMethodSymbol>())
+                {
+                    // Get the names of the parameters
+                    var parameters = method.Parameters.Select(p => p.Name).ToList();
+
+                    // Add the endpoint and its parameters to the dictionary
+                    endpoints[method.Name] = parameters;
+                }
+
+                // Add the controller and its endpoints to the result dictionary
+                result[symbol.Name] = endpoints;
+            }
+
+            return result;
+        }
+
 
         private static bool IsCandidateClass(SyntaxNode node)
         {
